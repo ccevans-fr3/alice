@@ -19,7 +19,7 @@ reddit = praw.Reddit(client_id='l1iXXpo71aAJNQ',
 
 subreddit = reddit.subreddit('jokes')
 
-hot_python = subreddit.hot(limit = 20)
+hot_python = subreddit.hot(limit = 25)
 
 def get_text(submission):
     title = submission.title
@@ -28,7 +28,7 @@ def get_text(submission):
         text = submission.selftext
     else:
         text = title + '.\n' + submission.selftext
-    text = text.replace('!\"', '!').replace('?\"', '?').replace('!\'', '!').replace('?\'', '?').replace('&#x200B;', '')
+    text = text.replace('!\"', '!').replace('?\"', '?').replace('!\'', '!').replace('?\'', '?').replace('&#x200B;', '').replace('**', '')
     if 'edit:' in text.lower():
         text = text[0:text.lower().index('edit:')]
     return text
