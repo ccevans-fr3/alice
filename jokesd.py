@@ -4,6 +4,7 @@ import time
 import subprocess
 import os
 import RPi.GPIO as GPIO
+from snowboy import snowboydecoder
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -18,12 +19,12 @@ reddit = praw.Reddit(client_id='l1iXXpo71aAJNQ',
 
 subreddit = reddit.subreddit('jokes')
 
-hot_python = subreddit.hot(limit = 10)
+hot_python = subreddit.hot(limit = 20)
 
 def get_text(submission):
     title = submission.title
     firstn = submission.selftext[0:len(title)]
-    if firstn.lower() == title.lower():
+    if title.lower() == firstn.lower():
         text = submission.selftext
     else:
         text = title + '.\n' + submission.selftext
@@ -38,17 +39,23 @@ def save_audio(text, index):
     tts.save(filename)
     print(filename + ' saved')
 
+def call_joke():
+    global i
+    global j
+    print('Run callback triggered. i = ' + str(i) + ', j = ' + str(j))
+    if i < j:
+        subprocess.call('sudo pulseaudio -D', shell=True)
+        subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'voice' + str(i) + '.mp3'])
+    else:
+        get_new_submission()
+    i += 1
+
+def detected_callback():
+    call_joke()
+
 def run_callback(channel):
     if not GPIO.input(4):
-        global i
-        global j
-        print('Run callback triggered. i = ' + str(i) + ', j = ' + str(j))
-        if i < j:
-            subprocess.call('sudo pulseaudio -D', shell=True)
-            subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'voice' + str(i) + '.mp3'])
-        else:
-            get_new_submission()
-        i += 1
+        call_joke()
 
 def shutdown_callback(channel):
     for i in range(10):
@@ -83,10 +90,14 @@ try:
     GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
     GPIO.add_event_detect(18, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
 
+    detector = snowboydecoder.HotwordDetector('hey_alice.pmdl', sensitivity=0.45, audio_gain=1)
+
+    detector.start(detected_callback)
+
     while True:
         print('jokesd running')
         time.sleep(60)
 
 except:
     print("Unable to get data")
-
+    

@@ -6,11 +6,11 @@ import pigpio
 
 filename = sys.argv[1]
 
-PA_SOURCE = "alsa_output.platform-soc_audio.analog-mono.monitor"
+PA_SOURCE = "alsa_output.usb-Generic_USB2.0_Device_20130100ph0-00.analog-stereo.monitor"
 
 PA_FORMAT = "u8"
-PA_CHANNELS = 1
-PA_RATE = 500
+PA_CHANNELS = 2
+PA_RATE = 700
 PA_BUFFER = 32
 
 parec = subprocess.Popen(["/usr/bin/pacat", "--record", "--device=" + PA_SOURCE, "--rate=" + str(PA_RATE), "--channels=" + str(PA_CHANNELS), "--format=" + PA_FORMAT, "--latency=" + str(PA_BUFFER)], stdout=subprocess.PIPE)
@@ -29,6 +29,7 @@ def speak():
     while pygame.mixer.music.get_busy() == True:
         sample = ord(parec.stdout.read(1)) - 128
         i += 1
+        print(sample)
         if i % 20 == 0:
             set_servo_angle(max)
             max = 0
@@ -36,7 +37,7 @@ def speak():
         continue
 
 def set_servo_angle(max):
-    angle = (max/20) * 30
+    angle = 5 + (max/20) * 30
     pw = angle * 2000/180 + 500
     pi.set_servo_pulsewidth(servo_pin, pw)
 
