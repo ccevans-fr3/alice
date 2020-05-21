@@ -9,7 +9,7 @@ filename = sys.argv[1]
 PA_SOURCE = "alsa_output.usb-Generic_USB2.0_Device_20130100ph0-00.analog-stereo.monitor"
 
 PA_FORMAT = "u8"
-PA_CHANNELS = 2
+PA_CHANNELS = 1
 PA_RATE = 700
 PA_BUFFER = 32
 
@@ -29,7 +29,6 @@ def speak():
     while pygame.mixer.music.get_busy() == True:
         sample = ord(parec.stdout.read(1)) - 128
         i += 1
-        print(sample)
         if i % 20 == 0:
             set_servo_angle(max)
             max = 0
@@ -37,15 +36,15 @@ def speak():
         continue
 
 def set_servo_angle(max):
-    angle = 5 + (max/20) * 30
+    angle = (max/20) * 30 + 5
     pw = angle * 2000/180 + 500
     pi.set_servo_pulsewidth(servo_pin, pw)
 
 
 try:
-    set_servo_angle(0)
+    set_servo_angle(5)
     speak()
-    set_servo_angle(0)
+    set_servo_angle(5)
     time.sleep(1)
     
     pi.set_servo_pulsewidth(servo_pin, 0)

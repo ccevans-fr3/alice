@@ -82,10 +82,14 @@ submission_ids = []
 try:
     for submission in hot_python:
         if not submission.stickied and len(submission.selftext) <= 1000:
-            submission_ids.append(submission)
-            text = get_text(submission)
-            save_audio(text, j)
-            j += 1
+            try:
+                submission_ids.append(submission)
+                text = get_text(submission)
+                save_audio(text, j)
+                j += 1
+            except Exception as e:
+                print(e)
+                pass
 
     GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
     GPIO.add_event_detect(18, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
@@ -98,6 +102,6 @@ try:
         print('jokesd running')
         time.sleep(60)
 
-except:
-    print("Unable to get data")
+except Exception as e:
+    print("Unable to get data\n" + str(e))
     
