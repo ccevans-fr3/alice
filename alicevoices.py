@@ -8,7 +8,7 @@ def save_audio(text, filename):
 
 voices = {}
 
-voices['bye'] = 'Bye bye for now!'
+voices['bye'] = 'Catchya later boyz'
 voices['hmm'] = 'Hang on. Lemme think of a good one'
 voices['sorry'] = 'Gimme a wifi connection and I\'ll dish out some more. Okay?'
 
