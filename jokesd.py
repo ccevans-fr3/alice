@@ -8,7 +8,7 @@ from snowboy import snowboydecoder
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(3, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 i = 0   # index of joke told
 j = 0   # index of joke downloaded
@@ -47,6 +47,9 @@ def call_joke():
         subprocess.call('sudo pulseaudio -D', shell=True)
         subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'voice' + str(i) + '.mp3'])
     else:
+        if i == j:
+            subprocess.call('sudo pulseaudio -D', shell=True)
+            subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'hmm.mp3'])
         get_new_submission()
     i += 1
 
@@ -60,48 +63,64 @@ def run_callback(channel):
 def shutdown_callback(channel):
     for i in range(10):
         time.sleep(0.1)
-        if GPIO.input(18):
+        if GPIO.input(3):
             return
+    subprocess.call('sudo pulseaudio -D', shell=True)
+    subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'bye.mp3'])
+    time.sleep(3)
     GPIO.cleanup()
     os.system("sudo shutdown now -h")
 
+# After downloaded jokes have been used, new jokes are downloaded individually
 def get_new_submission():
-    hot_python_extra = subreddit.hot(limit = 200)
-    for submission in hot_python_extra:
-        print(submission)
-        if not submission.stickied and submission not in submission_ids:
-            save_audio(get_text(submission), 0)
-            submission_ids.append(submission)
-            subprocess.call('sudo pulseaudio -D', shell=True)
-            subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'voice0.mp3'])
-            break
+    try:
+        hot_python_extra = subreddit.hot(limit = 200)
+        for submission in hot_python_extra:
+            print(submission)
+            if not submission.stickied and submission not in submission_ids:
+                save_audio(get_text(submission), 0)
+                submission_ids.append(submission)
+                subprocess.call('sudo pulseaudio -D', shell=True)
+                subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'voice0.mp3'])
+                break
+    except:
+        subprocess.call('sudo pulseaudio -D', shell=True)
+        subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'sorry.mp3'])
 
 
 submission_ids = []
 
-try:
-    for submission in hot_python:
-        if not submission.stickied and len(submission.selftext) <= 1000:
-            try:
-                submission_ids.append(submission)
-                text = get_text(submission)
-                save_audio(text, j)
-                j += 1
-            except Exception as e:
-                print(e)
-                pass
+GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
+GPIO.add_event_detect(3, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
 
-    GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
-    GPIO.add_event_detect(18, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
+detector = snowboydecoder.HotwordDetector('hey_alice.pmdl', sensitivity=0.45, audio_gain=1)
 
-    detector = snowboydecoder.HotwordDetector('hey_alice.pmdl', sensitivity=0.45, audio_gain=1)
+detector.start(detected_callback)
 
-    detector.start(detected_callback)
+# Attempt to download jokes and keep script running
+for attempt in range(100):
+    try:
+        for submission in hot_python:
+            if not submission.stickied and len(submission.selftext) <= 1000:
+                try:
+                    submission_ids.append(submission)
+                    text = get_text(submission)
+                    save_audio(text, j)
+                    j += 1
+                except Exception as e:
+                    print(e)
+                    pass
+        # Keep script running
+        while True:
+            print('jokesd running')
+            time.sleep(60)
 
-    while True:
-        print('jokesd running')
-        time.sleep(60)
+    except Exception as e:
+        print("Unable to get data\n" + str(e))
+        
+        # Keep script running even if internet is unavailable
+        while True:
+            print('jokesd running (offline)')
+            time.sleep(60)
+            continue
 
-except Exception as e:
-    print("Unable to get data\n" + str(e))
-    

@@ -6,7 +6,7 @@ import pigpio
 
 filename = sys.argv[1]
 
-PA_SOURCE = "alsa_output.usb-Generic_USB2.0_Device_20130100ph0-00.analog-stereo.monitor"
+PA_SOURCE = "alsa_output.platform-soc_audio.analog-mono.monitor"
 
 PA_FORMAT = "u8"
 PA_CHANNELS = 1
