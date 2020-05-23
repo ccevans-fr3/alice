@@ -4,6 +4,7 @@ import time
 import subprocess
 import os
 import RPi.GPIO as GPIO
+import threading
 from snowboy import snowboydecoder
 
 GPIO.setmode(GPIO.BCM)
@@ -20,6 +21,13 @@ reddit = praw.Reddit(client_id='l1iXXpo71aAJNQ',
 subreddit = reddit.subreddit('jokes')
 
 hot_python = subreddit.hot(limit = 25)
+
+submission_ids = [] # list to hold first n submission IDs
+
+GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
+GPIO.add_event_detect(3, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
+
+detector = snowboydecoder.HotwordDetector('hey_alice.pmdl', sensitivity=0.45, audio_gain=1.5)
 
 def get_text(submission):
     title = submission.title
@@ -77,7 +85,7 @@ def get_new_submission():
         hot_python_extra = subreddit.hot(limit = 200)
         for submission in hot_python_extra:
             print(submission)
-            if not submission.stickied and submission not in submission_ids:
+            if not submission.stickied and submission not in submission_ids and len(submission.selftext) <= 1000:
                 save_audio(get_text(submission), 0)
                 submission_ids.append(submission)
                 subprocess.call('sudo pulseaudio -D', shell=True)
@@ -88,39 +96,40 @@ def get_new_submission():
         subprocess.call(['/usr/bin/python3', '/home/pi/jokes.py', 'sorry.mp3'])
 
 
-submission_ids = []
-
-GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
-GPIO.add_event_detect(3, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
-
-detector = snowboydecoder.HotwordDetector('hey_alice.pmdl', sensitivity=0.45, audio_gain=1)
-
-detector.start(detected_callback)
-
 # Attempt to download jokes and keep script running
-for attempt in range(100):
-    try:
-        for submission in hot_python:
-            if not submission.stickied and len(submission.selftext) <= 1000:
-                try:
-                    submission_ids.append(submission)
-                    text = get_text(submission)
-                    save_audio(text, j)
-                    j += 1
-                except Exception as e:
-                    print(e)
-                    pass
-        # Keep script running
-        while True:
-            print('jokesd running')
-            time.sleep(60)
+def download():
+    global j
+    for attempt in range(100):
+        try:
+            for submission in hot_python:
+                if not submission.stickied and len(submission.selftext) <= 1000:
+                    try:
+                        submission_ids.append(submission)
+                        text = get_text(submission)
+                        save_audio(text, j)
+                        j += 1
+                    except Exception as e:
+                        print(e)
+                        pass
+            # Keep script running
+            while True:
+                print('jokesd running')
+                time.sleep(60)
 
-    except Exception as e:
-        print("Unable to get data\n" + str(e))
-        
-        # Keep script running even if internet is unavailable
-        while True:
-            print('jokesd running (offline)')
-            time.sleep(60)
-            continue
+        except Exception as e:
+            print("Unable to get data\n" + str(e))
+            # Keep script running even if internet is unavailable and re-attempt download
+            while True:
+                print('jokesd running (offline)')
+                time.sleep(60)
+                continue
+
+def listen():
+    detector.start(detected_callback)
+
+d = threading.Thread(name='download', target=download)
+l = threading.Thread(name='listen', target=listen)
+
+d.start()
+f.start()
 
