@@ -24,10 +24,6 @@ hot_python = subreddit.hot(limit = 25)
 
 submission_ids = [] # list to hold first n submission IDs
 
-GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
-GPIO.add_event_detect(3, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
-
-detector = snowboydecoder.HotwordDetector('hey_alice.pmdl', sensitivity=0.45, audio_gain=1.5)
 
 def get_text(submission):
     title = submission.title
@@ -126,6 +122,12 @@ def download():
 
 def listen():
     detector.start(detected_callback)
+
+
+GPIO.add_event_detect(4, GPIO.FALLING, callback=run_callback, bouncetime=300)
+GPIO.add_event_detect(3, GPIO.FALLING, callback=shutdown_callback, bouncetime=300)
+
+detector = snowboydecoder.HotwordDetector('hey_alice.pmdl', sensitivity=0.45, audio_gain=1.5)
 
 d = threading.Thread(name='download', target=download)
 l = threading.Thread(name='listen', target=listen)
